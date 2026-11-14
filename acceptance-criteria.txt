@@ -1,1 +1,142 @@
+ACCEPTANCE CRITERIA – English ⇄ Vietnamese (Northern / Hanoi) Vocabulary Trainer
+=================================================================================
 
+Priority legend:  [MUST] = required for v1   [SHOULD] = strongly wanted for v1   [COULD] = nice to have / later
+
+
+1. HOSTING & ARCHITECTURE
+-------------------------
+1.1 [MUST]   The app is a static website (HTML, CSS, JavaScript) served by GitHub Pages from this repository.
+1.2 [MUST]   There is no backend, no database, no login, and no build step that needs a server.
+1.3 [MUST]   Pushing a commit to the `main` branch updates the live site automatically (GitHub Pages / GitHub Actions deploy).
+1.4 [MUST]   The site works on current mobile Safari (iOS) and Chrome (Android), and on desktop browsers.
+1.5 [SHOULD] No external runtime dependencies (frameworks, CDNs) are needed; plain HTML/CSS/JS is enough.
+1.6 [COULD]  The app works offline after the first visit (PWA with a service worker) and can be added to the phone's home screen with its own icon and name.
+
+
+2. WORD DATA
+------------
+2.1 [MUST]   All vocabulary is stored in one data file in the repo (e.g. `data/words.json`).
+2.2 [MUST]   Words cannot be added or edited through the website. New words are added by editing the data file and pushing to GitHub.
+2.3 [MUST]   Each entry has at least:
+               - id            stable unique identifier (never reused; progress is linked to it)
+               - vietnamese    the word/phrase with correct diacritics (e.g. "cà phê")
+               - english       the translation(s)
+               - topic         the Duolingo section it belongs to
+2.4 [SHOULD] Each entry may additionally have:
+               - example_vi    an example sentence in Vietnamese
+               - example_en    the English translation of the example sentence
+               - type          word class (noun, verb, adjective, phrase, pronoun, …)
+               - note          hints, e.g. classifiers ("con", "cái"), politeness, or usage hints
+               - added         date the word was added (YYYY-MM-DD)
+2.5 [MUST]   All Vietnamese entries use Northern (Hanoi) vocabulary and spelling. Other dialects are not included.
+2.6 [MUST]   The initial data file contains roughly 100 words/phrases from these Duolingo sections:
+               - Introduce yourself
+               - Order drinks
+               - Greet people
+               - Introduce family members
+               - Talk to the waiter
+               - Discuss places
+2.7 [MUST]   Adding new words to the file does not reset or break the learning progress of existing words.
+2.8 [SHOULD] A GitHub Action validates the data file on every push (valid JSON, required fields present,
+             no duplicate ids, no duplicate Vietnamese entries within the same topic) and fails the build otherwise.
+2.9 [SHOULD] The README explains how to add new words (format + an example entry).
+
+
+3. BROWSE / WORD LIST
+---------------------
+3.1 [MUST]   There is a list view showing all words with Vietnamese and English side by side.
+3.2 [MUST]   The list can be filtered by topic (Duolingo section).
+3.3 [MUST]   Tapping a word opens a detail view showing: Vietnamese, English, word type, example sentence
+             (Vietnamese + English) and note, if available.
+3.4 [SHOULD] There is a search field that finds words by English or Vietnamese.
+3.5 [SHOULD] Search ignores diacritics, so typing "ca phe" finds "cà phê".
+3.6 [COULD]  Words can be sorted alphabetically, by topic, or by "newest added".
+3.7 [COULD]  Newly added words (e.g. last 14 days) are marked with a "new" badge.
+
+
+4. FLASHCARD TRAINING
+---------------------
+4.1 [MUST]   The user can start a flashcard session for all words or for one or more selected topics.
+4.2 [MUST]   The user can choose the direction: English → Vietnamese or Vietnamese → English (or mixed).
+4.3 [MUST]   A card shows the prompt side; tapping the card reveals the answer, including the example sentence if available.
+4.4 [MUST]   After revealing, the user rates the card with two large buttons: "I knew it" / "Again".
+4.5 [MUST]   Cards marked "Again" come back later in the same session.
+4.6 [MUST]   The session shows progress (e.g. "7 / 20").
+4.7 [MUST]   At the end, a summary shows how many words were known vs. need practice.
+4.8 [SHOULD] Session length is selectable (e.g. 10 / 20 / all cards). Cards are shuffled.
+4.9 [COULD]  Swipe right = "I knew it", swipe left = "Again" as an alternative to the buttons.
+
+
+5. QUIZ MODES
+-------------
+5.1 [SHOULD] Multiple choice: show a word and 4 possible translations; feedback (correct/wrong + right answer) is shown immediately.
+5.2 [SHOULD] Wrong answers in multiple choice are drawn from the same topic where possible, so they are not too easy.
+5.3 [COULD]  Typing mode (English → Vietnamese): the user types the answer.
+               - An exact answer (incl. diacritics) counts as correct.
+               - An answer correct except for diacritics counts as "almost": accepted, but the correct tones are highlighted.
+               - Case and leading/trailing spaces are ignored.
+5.4 [COULD]  Tone/diacritic helper buttons (à á ả ã ạ, ă â đ ê ô ơ ư) are available in typing mode for phones without a Vietnamese keyboard.
+
+
+6. PROGRESS & SPACED REPETITION
+-------------------------------
+6.1 [MUST]   Learning progress is stored in the browser (localStorage) on the device. No account is needed.
+6.2 [MUST]   Progress survives closing the browser and new deployments of the site.
+6.3 [SHOULD] Each word has a learning level (e.g. Leitner boxes 0–5). "I knew it" moves it up, "Again" moves it back to box 0.
+6.4 [SHOULD] A "Review due" session offers the words that are due based on their level
+             (e.g. box 0: always, 1: after 1 day, 2: 3 days, 3: 7 days, 4: 14 days, 5: 30 days).
+6.5 [SHOULD] The home screen shows a simple overview: total words, words learned, words due today.
+6.6 [SHOULD] Progress per topic is visible (e.g. "Order drinks: 12 / 18 learned").
+6.7 [COULD]  The user can export progress as a file and import it again (to move to another device / back up).
+6.8 [COULD]  The user can reset all progress (with a confirmation step).
+6.9 [COULD]  A daily streak counter is shown.
+
+
+7. PRONUNCIATION / AUDIO
+------------------------
+7.1 [COULD]  A speaker button reads the Vietnamese word/sentence aloud using the browser's built-in speech
+             synthesis (Web Speech API, language "vi-VN").
+7.2 [COULD]  If no Vietnamese voice is available on the device, the speaker button is hidden instead of failing.
+             (Note: built-in voices are often Northern-accented, but this cannot be guaranteed.)
+
+
+8. DESIGN & USABILITY (MOBILE FIRST)
+------------------------------------
+8.1 [MUST]   The layout is designed for phones first (from 360 px wide) and also works on tablet/desktop.
+8.2 [MUST]   No horizontal scrolling on phones; text is readable without zooming (min. 16 px body text).
+8.3 [MUST]   All buttons and tap targets are at least 44 × 44 px and usable with one thumb.
+8.4 [MUST]   Vietnamese diacritics render correctly and clearly (font with full Vietnamese support, e.g. system font).
+8.5 [MUST]   The design is simple and clean: one main action per screen, minimal colors, no clutter.
+8.6 [MUST]   Navigation between Home, Word list, and Training is always reachable (e.g. bottom navigation bar).
+8.7 [SHOULD] The app follows the phone's light/dark mode setting.
+8.8 [SHOULD] Color is never the only way to show correct/wrong (also use icons or text) – accessible contrast (WCAG AA).
+8.9 [SHOULD] The page loads in under 2 seconds on a normal mobile connection.
+8.10 [SHOULD] The interface language is English.
+
+
+9. QUALITY OF CONTENT
+---------------------
+9.1 [MUST]   Every Vietnamese word has correct tone marks.
+9.2 [MUST]   Example sentences use simple vocabulary at the learner's level, ideally reusing words from the list.
+9.3 [SHOULD] Common pronouns/forms of address (anh, chị, em, bạn, tôi/mình, ông, bà, cô, chú) include a note explaining when they are used.
+9.4 [SHOULD] Polite phrases include the Northern polite particle usage where relevant (e.g. "ạ", "vâng").
+
+
+10. OUT OF SCOPE (v1)
+---------------------
+- Adding/editing words via the website
+- User accounts, login, cloud sync between devices
+- Recorded native-speaker audio files
+- Grammar lessons
+- Other dialects (e.g. Southern Vietnamese)
+
+
+DEFINITION OF DONE (v1)
+-----------------------
+- All [MUST] criteria are met.
+- The site is live on GitHub Pages (https://<username>.github.io/vietnamese/).
+- The initial ~100 words are in the data file, reviewed by the learner against the Duolingo sections.
+- A new word can be added by editing only the data file, and it appears on the live site after push
+  without affecting existing progress.
+- Tested manually on a real phone (iOS Safari or Android Chrome).
