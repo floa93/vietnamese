@@ -21,6 +21,12 @@ export function render(root, data) {
       }${streak.best > streak.count ? ` · best ${streak.best}` : ''}`
     : `<span aria-hidden="true">🔥</span> No streak yet – practise today to start one${streak.best ? ` · best ${streak.best}` : ''}`;
 
+  const heroTitle = due.length
+    ? `${due.length} ${due.length === 1 ? 'word' : 'words'} to review today`
+    : fresh === words.length
+      ? 'Learn your first words'
+      : 'All caught up for today';
+
   const topicRows = topics
     .map((t) => {
       const inTopic = words.filter((w) => w.topic === t);
@@ -34,13 +40,16 @@ export function render(root, data) {
     .join('');
 
   root.innerHTML = `
-    <section class="stats" aria-label="Overview">
-      <div class="stat"><span class="stat-num">${words.length}</span><span class="stat-label">words</span></div>
-      <div class="stat"><span class="stat-num">${learned}</span><span class="stat-label">learned</span></div>
-      <div class="stat"><span class="stat-num">${due.length}</span><span class="stat-label">due today</span></div>
+    <section class="hero" aria-label="Overview">
+      <p class="streak">${streakText}</p>
+      <p class="hero-title">${heroTitle}</p>
+      ${primary}
+      <div class="stats">
+        <div class="stat"><span class="stat-num">${words.length}</span><span class="stat-label">words</span></div>
+        <div class="stat"><span class="stat-num">${learned}</span><span class="stat-label">learned</span></div>
+        <div class="stat"><span class="stat-num">${due.length}</span><span class="stat-label">due today</span></div>
+      </div>
     </section>
-    <p class="streak">${streakText}</p>
-    ${primary}
     <h2 class="section-title">Topics</h2>
     <ul class="topic-list">${topicRows}</ul>
     <a class="btn btn-ghost btn-block" href="#/settings">Backup &amp; settings</a>
