@@ -1,12 +1,14 @@
 // @ts-check
 // Backup (export / import) and reset of the learning progress.
 import * as progress from '../progress.js';
-import { today } from '../util.js';
+import { today, esc } from '../util.js';
+import { speak, voiceInfo } from '../speech.js';
 
 /** @param {HTMLElement} root @param {any} data */
 export function render(root, data) {
   const studied = progress.studiedCount();
   const voice = document.documentElement.classList.contains('has-vi-voice');
+  const info = voiceInfo();
 
   root.innerHTML = `
     <section class="panel">
@@ -41,6 +43,13 @@ export function render(root, data) {
           ? 'A Vietnamese voice is available – tap 🔊 next to a word to hear it.'
           : 'No Vietnamese voice was found on this device, so speaker buttons are hidden. You can add one in your phone’s accessibility / text-to-speech settings.'
       }</p>
+      ${
+        voice
+          ? `<p class="muted">Voice: ${esc(info?.name)} (${esc(info?.lang)})</p>
+      <button class="btn btn-block" type="button" id="test-voice"><span aria-hidden="true">🔊</span> Test voice</button>
+      <p id="voice-msg" class="msg" role="status"></p>`
+          : ''
+      }
     </section>
   `;
 
@@ -112,6 +121,19 @@ export function render(root, data) {
     resetBox.hidden = true;
     resetBtn.hidden = false;
     /** @type {HTMLElement} */ (root.querySelector('#reset-msg')).textContent = '✓ All progress has been reset.';
+  });
+
+  const voiceMsg = /** @type {HTMLElement|null} */ (root.querySelector('#voice-msg'));
+  root.querySelector('#test-voice')?.addEventListener('click', () => {
+    if (!voiceMsg) return;
+    voiceMsg.className = 'msg';
+    voiceMsg.textContent = 'Speaking…';
+    speak('Xin chào, bạn khỏe không?', (error) => {
+      voiceMsg.className = `msg ${error ? 'msg-error' : 'msg-ok'}`;
+      voiceMsg.textContent = error
+        ? `✗ Speech failed (${error}). Check that Vietnamese voice data is downloaded in your phone’s text-to-speech settings (Google or Samsung engine), and that media volume is up.`
+        : '✓ Done. If you heard nothing, turn up the media volume.';
+    });
   });
 
   return 'Settings';
