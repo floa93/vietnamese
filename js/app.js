@@ -4,10 +4,12 @@
 // GitHub Pages without any server configuration.
 
 import { loadData } from './data.js';
+import { initSpeech } from './speech.js';
 import { esc } from './util.js';
 import * as home from './views/home.js';
 import * as words from './views/words.js';
 import * as train from './views/train.js';
+import * as settings from './views/settings.js';
 
 /** @type {[RegExp, (root: HTMLElement, data: any, match: RegExpMatchArray) => string, string][]} */
 const routes = [
@@ -16,6 +18,7 @@ const routes = [
   [/^#\/words\/([^/]+)$/, words.renderDetail, 'words'],
   [/^#\/train$/, train.renderSetup, 'train'],
   [/^#\/train\/session$/, train.renderSession, 'train'],
+  [/^#\/settings$/, settings.render, 'settings'],
 ];
 
 const root = /** @type {HTMLElement} */ (document.getElementById('app'));
@@ -53,5 +56,9 @@ async function route() {
   document.title = title === 'Vietnamese' ? 'Vietnamese Trainer' : `${title} · Vietnamese Trainer`;
 }
 
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => {
+  route();
+  window.scrollTo(0, 0);
+});
+initSpeech();
 route();

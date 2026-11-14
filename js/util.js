@@ -53,3 +53,11 @@ export function addDays(isoDate, days) {
   const [y, m, d] = isoDate.split('-').map(Number);
   return toISODate(new Date(y, m - 1, d + days));
 }
+
+/** Days within which a word counts as "new" (badge in the word list). */
+export const NEW_DAYS = 14;
+
+/** True if a YYYY-MM-DD date is within the last NEW_DAYS days. */
+export function isRecent(isoDate) {
+  return typeof isoDate === 'string' && isoDate >= addDays(today(), -NEW_DAYS);
+}

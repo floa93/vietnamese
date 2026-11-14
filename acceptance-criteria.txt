@@ -11,7 +11,6 @@ Priority legend:  [MUST] = required for v1   [SHOULD] = strongly wanted for v1  
 1.3 [MUST]   Pushing a commit to the `main` branch updates the live site automatically (GitHub Pages / GitHub Actions deploy).
 1.4 [MUST]   The site works on current mobile Safari (iOS) and Chrome (Android), and on desktop browsers.
 1.5 [SHOULD] No external runtime dependencies (frameworks, CDNs) are needed; plain HTML/CSS/JS is enough.
-1.6 [COULD]  The app works offline after the first visit (PWA with a service worker) and can be added to the phone's home screen with its own icon and name.
 
 
 2. WORD DATA
@@ -130,6 +129,7 @@ Priority legend:  [MUST] = required for v1   [SHOULD] = strongly wanted for v1  
 - Recorded native-speaker audio files
 - Grammar lessons
 - Other dialects (e.g. Southern Vietnamese)
+- Offline mode / PWA (service worker, install to home screen)
 
 
 DEFINITION OF DONE (v1)
