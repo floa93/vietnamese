@@ -40,6 +40,16 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html css js data _site/
+      - name: Version CSS/JS URLs (cache busting)
+        # GitHub Pages can't be told to skip caching, so phones keep old CSS/JS.
+        # Appending ?v=<commit> gives every deploy fresh URLs. All imports of a
+        # module get the same suffix, so each module still loads only once.
+        run: |
+          V="${GITHUB_SHA::8}"
+          sed -i -E "s#(href=\"css/style\.css)\"#\1?v=$V\"#; s#(src=\"js/app\.js)\"#\1?v=$V\"#" _site/index.html
+          find _site/js -name '*.js' -exec sed -i -E "s#(from '\.\.?/[^']+\.js)'#\1?v=$V'#g" {} +
+          grep -q "style.css?v=$V" _site/index.html && grep -q "app.js?v=$V" _site/index.html
+          ! grep -rnE "from '\.\.?/[^']+\.js'" _site/js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
