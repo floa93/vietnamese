@@ -38,9 +38,9 @@ scripts/validate-data.mjs  data checks (run in CI)
 1. Open `data/words.json` and add an entry to `"words"`:
 
    ```json
-   { "id": "w124", "vietnamese": "bánh mì", "english": "bread; baguette sandwich",
+   { "id": "w221", "vietnamese": "bánh mì", "english": "bread; baguette sandwich",
      "topic": "Order drinks", "type": "noun",
-     "example_vi": "Cho tôi một cái bánh mì.", "example_en": "Give me a bánh mì, please.",
+     "example_vi": "Cho mình một cái bánh mì.", "example_en": "Give me a bánh mì, please.",
      "note": "Classifier: cái.", "added": "2026-11-20" }
    ```
 
