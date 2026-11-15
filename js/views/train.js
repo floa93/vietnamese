@@ -2,7 +2,8 @@
 import * as progress from '../progress.js';
 import { speakButton } from '../speech.js';
 import { esc, shuffle } from '../util.js';
-import { checkAnswer, highlightDiacritics, applyTone, TONES, LETTERS } from '../vietnamese.js';
+import { checkAnswer, highlightDiacritics, applyTone, checkSpoken, TONES, LETTERS } from '../vietnamese.js';
+import { canListen, listen, stopListening, abortListening } from '../listen.js';
 import { exampleHTML } from './words.js';
 
 const SETTINGS_KEY = 'vt.settings.v1';
@@ -13,7 +14,7 @@ const SWIPE_DISTANCE = 90;
 
 /** @typedef {import('../data.js').Word} Word */
 /** @typedef {'en-vi' | 'vi-en' | 'mixed'} Direction */
-/** @typedef {'flash' | 'type'} Mode */
+/** @typedef {'flash' | 'type' | 'speak'} Mode */
 /** @typedef {{ word: Word, dir: 'en-vi' | 'vi-en' }} Card */
 
 /**
@@ -34,7 +35,18 @@ const SWIPE_DISTANCE = 90;
  * @property {Set<string>} missed ids wrong / "Again" at least once
  * @property {boolean} revealed   flashcards: answer visible
  * @property {Feedback | null} feedback typing: answer checked
+ * @property {Spoken} spoken      speaking: state of the current card
  */
+
+/**
+ * @typedef {Object} Spoken  speaking mode, current card
+ * @property {boolean} listening
+ * @property {number} attempts       attempts that were heard and checked
+ * @property {ReturnType<typeof checkSpoken> | null} result  last check
+ * @property {string} error          last recognizer error code
+ */
+
+const freshSpoken = () => ({ listening: false, attempts: 0, result: null, error: '' });
 
 /** @type {Session | null} */
 let session = null;
@@ -45,7 +57,7 @@ function loadSettings() {
   const defaults = { mode: 'flash', pool: 'all', topics: /** @type {string[]|null} */ (null), dir: 'en-vi', length: '20' };
   try {
     const s = { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
-    if (s.mode !== 'flash' && s.mode !== 'type') s.mode = 'flash'; // e.g. the removed multiple-choice mode
+    if (!['flash', 'type', 'speak'].includes(s.mode)) s.mode = 'flash'; // e.g. the removed multiple-choice mode
     return s;
   } catch {
     return defaults;
@@ -69,6 +81,7 @@ function saveSettings(s) {
  */
 export function startSession(words, { dir, mode }) {
   if (mode === 'type') dir = 'en-vi'; // typing is always English → Vietnamese
+  if (mode === 'speak') dir = 'vi-en'; // speaking shows the Vietnamese sentence
   const cards = shuffle(words).map((word) => ({
     word,
     dir: /** @type {'en-vi'|'vi-en'} */ (dir === 'mixed' ? (Math.random() < 0.5 ? 'en-vi' : 'vi-en') : dir),
@@ -84,6 +97,7 @@ export function startSession(words, { dir, mode }) {
     missed: new Set(),
     revealed: false,
     feedback: null,
+    spoken: freshSpoken(),
   };
   if (location.hash === '#/train/session') window.dispatchEvent(new HashChangeEvent('hashchange'));
   else location.hash = '#/train/session';
@@ -106,10 +120,12 @@ export function renderSetup(root, data) {
     <form id="setup" class="setup">
       <fieldset>
         <legend>Mode</legend>
-        <div class="choices choices-2">
+        <div class="choices">
           ${radio('mode', 'flash', 'Flashcards', s.mode === 'flash')}
           ${radio('mode', 'type', 'Typing', s.mode === 'type')}
+          ${radio('mode', 'speak', 'Speaking', s.mode === 'speak' && canListen())}
         </div>
+        <p class="muted small hint" id="speak-hint" hidden></p>
       </fieldset>
 
       <fieldset>
@@ -141,7 +157,7 @@ export function renderSetup(root, data) {
           ${radio('dir', 'vi-en', 'VI → EN', s.dir === 'vi-en')}
           ${radio('dir', 'mixed', 'Mixed', s.dir === 'mixed')}
         </div>
-        <p class="muted small hint" id="dir-hint" hidden>Typing is always English → Vietnamese.</p>
+        <p class="muted small hint" id="dir-hint" hidden></p>
       </fieldset>
 
       <fieldset>
@@ -162,6 +178,12 @@ export function renderSetup(root, data) {
   const startBtn = /** @type {HTMLButtonElement} */ (root.querySelector('#start'));
   const dirSet = /** @type {HTMLFieldSetElement} */ (root.querySelector('#dir-set'));
   const dirHint = /** @type {HTMLElement} */ (root.querySelector('#dir-hint'));
+  const speakHint = /** @type {HTMLElement} */ (root.querySelector('#speak-hint'));
+  const speakRadio = /** @type {HTMLInputElement} */ (root.querySelector('input[name="mode"][value="speak"]'));
+  if (!canListen()) {
+    speakRadio.disabled = true;
+    if (!form.querySelector('input[name="mode"]:checked')) /** @type {HTMLInputElement} */ (form.querySelector('input[value="flash"]')).checked = true;
+  }
   const topicBoxes = /** @type {HTMLInputElement[]} */ ([...root.querySelectorAll('input[name="topic"]')]);
 
   const read = () => {
@@ -191,8 +213,14 @@ export function renderSetup(root, data) {
     const { r, n } = pick();
     allBox.checked = topicBoxes.every((b) => b.checked);
     allBox.indeterminate = !allBox.checked && topicBoxes.some((b) => b.checked);
-    dirSet.disabled = r.mode === 'type';
-    dirHint.hidden = r.mode !== 'type';
+    dirSet.disabled = r.mode !== 'flash';
+    dirHint.hidden = r.mode === 'flash';
+    dirHint.textContent =
+      r.mode === 'type' ? 'Typing is always English → Vietnamese.' : 'Speaking: read the Vietnamese example sentence aloud.';
+    speakHint.hidden = canListen() && r.mode !== 'speak';
+    speakHint.textContent = canListen()
+      ? 'Every word must be recognized, tones included, before you can go on. Needs the microphone.'
+      : 'Speaking needs speech recognition, which this browser doesn’t have. Use Chrome or Safari.';
     for (const t of topics) {
       const el = root.querySelector(`[data-count="${CSS.escape(t)}"]`);
       if (el) el.textContent = String(words.filter((w) => w.topic === t && inPool(r.pool)(w)).length);
@@ -246,10 +274,12 @@ export function renderSession(root, data) {
 
   const rerender = () => renderSession(root, data);
   if (s.mode === 'type') renderTyping(root, s, card, head, rerender);
+  else if (s.mode === 'speak') renderSpeaking(root, s, card, head, rerender);
   else renderFlash(root, s, card, head, rerender);
 
   root.querySelector('#end')?.addEventListener('click', () => {
     // Unanswered cards are dropped; ratings given so far are already saved.
+    abortListening();
     s.queue = [];
     rerender();
   });
@@ -424,6 +454,122 @@ function renderTyping(root, s, card, head, rerender) {
   bindNext(root, rerender);
 }
 
+/* ----- speaking ----- */
+
+const MIC_ERRORS = {
+  'no-speech': 'I didn’t hear anything. Tap the microphone and read the sentence aloud.',
+  'not-allowed': 'Microphone access is blocked. Allow it for this site in the browser settings, then try again.',
+  'service-not-allowed': 'Speech recognition is turned off. On iPhone, turn on Siri & Dictation in Settings.',
+  'audio-capture': 'No microphone was found.',
+  network: 'Speech recognition needs an internet connection.',
+  'language-not-supported': 'This device can’t recognize Vietnamese speech.',
+};
+
+const MIC_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
+
+/** The sentence to say: the example sentence, or the word itself if there is none. */
+const spokenText = (/** @type {Word} */ w) => ({
+  vi: w.example_vi || w.vietnamese,
+  en: w.example_vi ? w.example_en || '' : w.english,
+});
+
+function renderSpeaking(root, s, card, head, rerender) {
+  const w = card.word;
+  const text = spokenText(w);
+  const sp = s.spoken;
+  const res = sp.result;
+  const passed = !!res?.passed;
+
+  const sentenceHTML = res
+    ? res.parts
+        .map((p) => (p.ok === null ? esc(p.text) : `<span class="${p.ok ? 'w-ok' : 'w-miss'}">${esc(p.text)}</span>`))
+        .join('')
+    : esc(text.vi);
+
+  const actions = passed
+    ? `<section class="feedback feedback-right" role="status">
+        <p class="feedback-title"><span aria-hidden="true">✓</span> ${sp.attempts === 1 ? 'Well said!' : 'Got it!'}</p>
+        <div class="feedback-details">
+          <div class="with-speak center-row"><p class="card-solution" lang="vi">${esc(w.vietnamese)}</p>${speakButton(w.vietnamese)}</div>
+          <p>${esc(w.english)}</p>
+          ${w.note ? `<p class="note"><span aria-hidden="true">💡</span> ${esc(w.note)}</p>` : ''}
+        </div>
+      </section>
+      <button class="btn btn-primary btn-block" type="button" id="next">Next</button>`
+    : `${
+        res
+          ? `<section class="feedback feedback-wrong" role="status">
+              <p class="feedback-title"><span aria-hidden="true">✗</span> Not quite</p>
+              <p>The <span class="w-miss">underlined</span> words weren’t recognized. Listen, then try again.</p>
+            </section>`
+          : ''
+      }
+      ${sp.error ? `<p class="msg msg-error center" role="alert">${esc(MIC_ERRORS[sp.error] || `Speech recognition failed (${sp.error}).`)}</p>` : ''}
+      <button class="mic${sp.listening ? ' mic-on' : ''}" type="button" id="mic" aria-pressed="${sp.listening}">
+        <span class="mic-icon">${MIC_ICON}</span>
+        <span class="mic-label">${sp.listening ? 'Listening… tap when done' : res ? 'Try again' : 'Tap and speak'}</span>
+      </button>
+      <button class="btn btn-ghost btn-block" type="button" id="skip">Can’t speak now · skip</button>`;
+
+  root.innerHTML = `${head}
+    <div class="card quiz-card speak-card">
+      <p class="card-label">Say it in Vietnamese</p>
+      <div class="with-speak center-row"><p class="speak-sentence" lang="vi">${sentenceHTML}</p>${speakButton(text.vi, 'Listen to the sentence')}</div>
+      ${text.en ? `<p class="muted">${esc(text.en)}</p>` : ''}
+    </div>
+    <p class="heard muted small center" id="heard" aria-live="polite">${
+      res ? `You said: <span lang="vi">“${esc(res.heard)}”</span>` : sp.listening ? '…' : ''
+    }</p>
+    ${actions}`;
+
+  const isCurrent = () => session === s && s.spoken === sp;
+
+  const mic = /** @type {HTMLButtonElement | null} */ (root.querySelector('#mic'));
+  mic?.addEventListener('click', () => {
+    if (sp.listening) return stopListening();
+    sp.listening = true;
+    sp.error = '';
+    listen({
+      onInterim: (t) => {
+        const el = document.getElementById('heard');
+        if (el && isCurrent()) el.textContent = t || '…';
+      },
+      onResult: (alternatives) => {
+        if (!isCurrent()) return;
+        sp.listening = false;
+        sp.attempts++;
+        sp.result = checkSpoken(text.vi, alternatives);
+        // Only the first attempt decides the long-term rating, but every word has to be
+        // said correctly before the card can be passed.
+        if (sp.attempts === 1) record(sp.result.passed);
+        rerender();
+      },
+      onError: (code) => {
+        sp.listening = false;
+        // "aborted": we stopped it ourselves (left the screen, skipped) – nothing to show.
+        if (code === 'aborted' || !isCurrent()) return;
+        sp.error = code;
+        rerender();
+      },
+    });
+    rerender();
+  });
+  mic?.focus({ preventScroll: true });
+
+  root.querySelector('#skip')?.addEventListener('click', () => {
+    abortListening();
+    record(false);
+    advance(false); // comes back later in the session
+    rerender();
+  });
+
+  root.querySelector('#next')?.addEventListener('click', () => {
+    advance(true);
+    rerender();
+  });
+  /** @type {HTMLElement | null} */ (root.querySelector('#next'))?.focus({ preventScroll: true });
+}
+
 /* ----- typing feedback ----- */
 
 function feedbackHTML(/** @type {Card} */ card, /** @type {Feedback} */ fb) {
@@ -483,6 +629,7 @@ function advance(/** @type {boolean} */ knew) {
   if (knew) s.cleared++;
   else s.queue.splice(Math.min(AGAIN_GAP, s.queue.length), 0, card);
   s.revealed = false;
+  s.spoken = freshSpoken();
 }
 
 /** Flashcard rating: record + advance. */

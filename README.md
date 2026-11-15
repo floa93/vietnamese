@@ -7,9 +7,10 @@ Live: https://floa93.github.io/vietnamese/
 ## Features
 
 - **Words**: a list of all words with search (accents optional, so `ca phe` finds `cà phê`), a topic filter, sorting (by topic, A–Z or newest added), a **new** badge for words added in the last 14 days, and a detail view.
-- **Train**: two modes, each for all topics or the ones you pick and for 10, 20 or all cards:
+- **Train**: three modes, each for all topics or the ones you pick and for 10, 20 or all cards:
   - *Flashcards* in either direction (EN → VI, VI → EN or mixed). Tap to reveal, then *I knew it* / *Again*, or swipe right / left. Cards you mark *Again* come back later in the same session.
   - *Typing* (EN → VI): an exact answer is correct. If only the accents differ, it counts as "almost" and the letters with different marks are highlighted. Buttons help you type tones and letters without a Vietnamese keyboard: tap a tone button after typing a word and it puts the mark on the right vowel.
+  - *Speaking*: read the word's Vietnamese example sentence aloud. The browser's speech recognition (`vi-VN`) checks it word by word, tones included. Words it didn't recognize are underlined, and you can only go on once every word is right. *Can't speak now · skip* sends the card back to later in the session. Only the first attempt changes the word's level. Needs Chrome (Android/desktop) or Safari (iOS/macOS, with Siri & Dictation turned on) and microphone access. In browsers without speech recognition (Firefox, Chrome on iOS) the mode is disabled.
 - **Progress**: Leitner boxes 0–5. *I knew it* / a correct answer moves a word up one box, and *Again* / a wrong answer sends it back to box 0. A word in box *n* is due again after 0 / 1 / 3 / 7 / 14 / 30 days. Only the first rating of a word in each session counts.
 - **Home**: totals, learned words (box ≥ 1), words due today, a daily streak and progress per topic.
 - **Backup & settings** (⚙ in the top bar; tap it again to go back): switch between a light (default) and dark theme, export progress to a file, import it on another device, or reset everything after a confirmation.
@@ -24,8 +25,9 @@ js/app.js                hash router (#/, #/words, #/words/<id>, #/train, #/trai
 js/data.js               loads data/words.json
 js/progress.js           Leitner boxes + streak in localStorage, export/import/reset
 js/util.js               diacritic folding, shuffle, dates
-js/vietnamese.js         typed-answer checking, tone placement for the helper keys
+js/vietnamese.js         typed/spoken answer checking, tone placement for the helper keys
 js/speech.js             text-to-speech (Web Speech API)
+js/listen.js             speech recognition for the speaking mode
 js/theme.js              light / dark theme switch
 js/views/*.js            one module per screen
 data/words.json          ALL vocabulary – the only file you edit to add words
