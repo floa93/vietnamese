@@ -1,4 +1,4 @@
-/* Vietnamese Trainer – mobile-first, light/dark via prefers-color-scheme.
+/* Vietnamese Trainer – mobile-first, always light (white) theme.
    Palette: clean white with jade accents and lotus pink highlights. */
 
 :root {
@@ -30,35 +30,7 @@
   --tap: 48px;
   --nav-h: 64px;
   --font: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  color-scheme: light dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c1616;
-    --surface: #142121;
-    --surface-2: #1d2e2e;
-    --text: #e6efed;
-    --muted: #9bb0ad;
-    --border: #2a3d3d;
-    --accent: #5fd4bb;
-    --accent-text: #05201c;
-    --accent-soft: #173a35;
-    --lotus: #ff8fb3;
-    --lotus-text: #3a0a1c;
-    --hero: #12403d;
-    --hero-text: #f2fbf8;
-    --hero-muted: #9cc7bf;
-    --good: #7fdcb6;
-    --good-bg: #153328;
-    --again: #ffc27a;
-    --again-bg: #3a2b17;
-    --bar: #5fd4bb;
-    --wrong: #ff9bb0;
-    --wrong-bg: #3d1a24;
-    --hl: #6b5310;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -12px rgba(0, 0, 0, 0.6);
-  }
+  color-scheme: light;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

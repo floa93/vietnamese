@@ -19,7 +19,7 @@ Live: https://floa93.github.io/vietnamese/
 
 ```
 index.html               app shell (top bar, <main>, bottom navigation)
-css/style.css            all styles; light/dark follows the phone setting
+css/style.css            all styles; always light (white) theme
 js/app.js                hash router (#/, #/words, #/words/<id>, #/train, #/train/session, #/settings)
 js/data.js               loads data/words.json
 js/progress.js           Leitner boxes + streak in localStorage, export/import/reset
