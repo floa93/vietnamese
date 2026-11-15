@@ -130,6 +130,7 @@ Priority legend:  [MUST] = required for v1   [SHOULD] = strongly wanted for v1  
 - Grammar lessons
 - Other dialects (e.g. Southern Vietnamese)
 - Offline mode / PWA (service worker, install to home screen)
+- Multiple choice mode (5.1, 5.2) – removed, not used
 
 
 DEFINITION OF DONE (v1)

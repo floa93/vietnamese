@@ -13,13 +13,12 @@ const SWIPE_DISTANCE = 90;
 
 /** @typedef {import('../data.js').Word} Word */
 /** @typedef {'en-vi' | 'vi-en' | 'mixed'} Direction */
-/** @typedef {'flash' | 'choice' | 'type'} Mode */
-/** @typedef {{ word: Word, dir: 'en-vi' | 'vi-en', options?: string[] }} Card */
+/** @typedef {'flash' | 'type'} Mode */
+/** @typedef {{ word: Word, dir: 'en-vi' | 'vi-en' }} Card */
 
 /**
- * @typedef {Object} Feedback  result shown after answering in quiz / typing mode
+ * @typedef {Object} Feedback  result shown after answering in typing mode
  * @property {'exact' | 'almost' | 'wrong'} result
- * @property {string} [chosen]  multiple choice: the picked option
  * @property {string} [typed]   typing: what the user typed
  */
 
@@ -27,7 +26,6 @@ const SWIPE_DISTANCE = 90;
  * @typedef {Object} Session
  * @property {Mode} mode
  * @property {Direction} dir
- * @property {Word[]} pool        all words (for multiple-choice distractors)
  * @property {Card[]} queue       cards still to answer; queue[0] is the current card
  * @property {Card[]} all         every card in the session (for "practice again")
  * @property {number} total
@@ -35,7 +33,7 @@ const SWIPE_DISTANCE = 90;
  * @property {Set<string>} known  ids correct on the first try
  * @property {Set<string>} missed ids wrong / "Again" at least once
  * @property {boolean} revealed   flashcards: answer visible
- * @property {Feedback | null} feedback quiz/typing: answer checked
+ * @property {Feedback | null} feedback typing: answer checked
  */
 
 /** @type {Session | null} */
@@ -46,7 +44,9 @@ let session = null;
 function loadSettings() {
   const defaults = { mode: 'flash', pool: 'all', topics: /** @type {string[]|null} */ (null), dir: 'en-vi', length: '20' };
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+    const s = { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+    if (s.mode !== 'flash' && s.mode !== 'type') s.mode = 'flash'; // e.g. the removed multiple-choice mode
+    return s;
   } catch {
     return defaults;
   }
@@ -65,9 +65,9 @@ function saveSettings(s) {
 /**
  * Start a new session and go to the session screen.
  * @param {Word[]} words   the words to practise
- * @param {{ dir: Direction, mode: Mode, pool: Word[] }} opts  pool = all words, for distractors
+ * @param {{ dir: Direction, mode: Mode }} opts
  */
-export function startSession(words, { dir, mode, pool }) {
+export function startSession(words, { dir, mode }) {
   if (mode === 'type') dir = 'en-vi'; // typing is always English → Vietnamese
   const cards = shuffle(words).map((word) => ({
     word,
@@ -76,7 +76,6 @@ export function startSession(words, { dir, mode, pool }) {
   session = {
     mode,
     dir,
-    pool,
     queue: cards.slice(),
     all: cards,
     total: cards.length,
@@ -107,9 +106,8 @@ export function renderSetup(root, data) {
     <form id="setup" class="setup">
       <fieldset>
         <legend>Mode</legend>
-        <div class="choices">
+        <div class="choices choices-2">
           ${radio('mode', 'flash', 'Flashcards', s.mode === 'flash')}
-          ${radio('mode', 'choice', 'Multiple choice', s.mode === 'choice')}
           ${radio('mode', 'type', 'Typing', s.mode === 'type')}
         </div>
       </fieldset>
@@ -214,7 +212,7 @@ export function renderSetup(root, data) {
     e.preventDefault();
     const { r, candidates, n } = pick();
     if (!n) return;
-    startSession(shuffle(candidates).slice(0, n), { dir: r.dir, mode: r.mode, pool: words });
+    startSession(shuffle(candidates).slice(0, n), { dir: r.dir, mode: r.mode });
   });
 
   refresh();
@@ -223,7 +221,6 @@ export function renderSetup(root, data) {
 
 /* ---------- session screen ---------- */
 
-const answerText = (/** @type {Card} */ c) => (c.dir === 'en-vi' ? c.word.vietnamese : c.word.english);
 const promptText = (/** @type {Card} */ c) => (c.dir === 'en-vi' ? c.word.english : c.word.vietnamese);
 
 /** @param {HTMLElement} root @param {any} data */
@@ -248,8 +245,7 @@ export function renderSession(root, data) {
     </div>`;
 
   const rerender = () => renderSession(root, data);
-  if (s.mode === 'choice') renderChoice(root, s, card, head, rerender);
-  else if (s.mode === 'type') renderTyping(root, s, card, head, rerender);
+  if (s.mode === 'type') renderTyping(root, s, card, head, rerender);
   else renderFlash(root, s, card, head, rerender);
 
   root.querySelector('#end')?.addEventListener('click', () => {
@@ -368,70 +364,6 @@ function enableSwipe(el, onSwipe) {
   el.addEventListener('pointercancel', reset);
 }
 
-/* ----- multiple choice ----- */
-
-/** 4 options: the answer plus 3 distractors, preferring the same topic. */
-function buildOptions(/** @type {Card} */ card, /** @type {Word[]} */ pool) {
-  const key = card.dir === 'en-vi' ? 'vietnamese' : 'english';
-  const right = card.word[key];
-  const seen = new Set([right.toLowerCase()]);
-  const options = [right];
-  const add = (words) => {
-    for (const w of shuffle(words)) {
-      if (options.length >= 4) return;
-      const text = w[key];
-      if (seen.has(text.toLowerCase())) continue;
-      seen.add(text.toLowerCase());
-      options.push(text);
-    }
-  };
-  add(pool.filter((w) => w.topic === card.word.topic && w.id !== card.word.id));
-  add(pool.filter((w) => w.topic !== card.word.topic));
-  return shuffle(options);
-}
-
-function renderChoice(root, s, card, head, rerender) {
-  card.options ??= buildOptions(card, s.pool);
-  const right = answerText(card);
-  const fb = s.feedback;
-  const viOptions = card.dir === 'en-vi';
-
-  const optionHTML = card.options
-    .map((opt, i) => {
-      let cls = '';
-      let mark = `<span class="opt-key" aria-hidden="true">${i + 1}</span>`;
-      if (fb) {
-        if (opt === right) {
-          cls = ' opt-right';
-          mark = '<span class="opt-key" aria-hidden="true">✓</span>';
-        } else if (opt === fb.chosen) {
-          cls = ' opt-wrong';
-          mark = '<span class="opt-key" aria-hidden="true">✗</span>';
-        }
-      }
-      const sr = fb && opt === right ? ' (correct answer)' : fb && opt === fb.chosen ? ' (your answer, wrong)' : '';
-      return `<button class="btn option${cls}" type="button" data-opt="${i}"${fb ? ' disabled' : ''}${viOptions ? ' lang="vi"' : ''}>
-        ${mark}<span class="opt-text">${esc(opt)}</span><span class="visually-hidden">${sr}</span></button>`;
-    })
-    .join('');
-
-  root.innerHTML = `${head}
-    <div class="card quiz-card" tabindex="-1" id="card">${label(card)}${promptHTML(card)}</div>
-    <div class="options">${optionHTML}</div>
-    ${fb ? feedbackHTML(card, fb) : ''}`;
-
-  root.querySelectorAll('[data-opt]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const chosen = /** @type {string[]} */ (card.options)[Number(b.getAttribute('data-opt'))];
-      const result = chosen === right ? 'exact' : 'wrong';
-      record(result !== 'wrong');
-      s.feedback = { result, chosen };
-      rerender();
-    }),
-  );
-  bindNext(root, rerender);
-}
-
 /* ----- typing ----- */
 
 function renderTyping(root, s, card, head, rerender) {
@@ -492,7 +424,7 @@ function renderTyping(root, s, card, head, rerender) {
   bindNext(root, rerender);
 }
 
-/* ----- shared quiz feedback ----- */
+/* ----- typing feedback ----- */
 
 function feedbackHTML(/** @type {Card} */ card, /** @type {Feedback} */ fb) {
   const w = card.word;
@@ -549,10 +481,7 @@ function advance(/** @type {boolean} */ knew) {
   if (!s) return;
   const card = /** @type {Card} */ (s.queue.shift());
   if (knew) s.cleared++;
-  else {
-    delete card.options; // new option order next time
-    s.queue.splice(Math.min(AGAIN_GAP, s.queue.length), 0, card);
-  }
+  else s.queue.splice(Math.min(AGAIN_GAP, s.queue.length), 0, card);
   s.revealed = false;
 }
 
@@ -600,7 +529,7 @@ function renderSummary(root, s, data) {
   root.querySelector('#retry')?.addEventListener('click', () => {
     startSession(
       missedCards.map((c) => c.word),
-      { dir: s.dir, mode: s.mode, pool: data.words },
+      { dir: s.dir, mode: s.mode },
     );
   });
   root.querySelector('#new')?.addEventListener('click', () => {
@@ -610,7 +539,7 @@ function renderSummary(root, s, data) {
 
 /* Keyboard shortcuts on desktop:
    flashcards: Space/Enter flips (native button), → = I knew it, ← = Again
-   multiple choice: 1–4 picks an option, Enter = Next (focused button) */
+   typing: Enter = Next (focused button) */
 document.addEventListener('keydown', (e) => {
   if (location.hash !== '#/train/session' || !session || !session.queue.length) return;
   if (e.target instanceof HTMLElement && e.target.matches('input, select, textarea')) return;
@@ -618,7 +547,6 @@ document.addEventListener('keydown', (e) => {
   const click = (sel) => /** @type {HTMLElement|null} */ (document.querySelector(sel))?.click();
   if (session.mode === 'flash' && session.revealed && e.key === 'ArrowRight') click('#knew');
   else if (session.mode === 'flash' && session.revealed && e.key === 'ArrowLeft') click('#again');
-  else if (session.mode === 'choice' && !session.feedback && /^[1-4]$/.test(e.key)) click(`[data-opt="${Number(e.key) - 1}"]`);
   else return;
   e.preventDefault();
 });

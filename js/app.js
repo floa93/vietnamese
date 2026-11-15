@@ -23,6 +23,9 @@ const routes = [
 
 const root = /** @type {HTMLElement} */ (document.getElementById('app'));
 const titleEl = /** @type {HTMLElement} */ (document.getElementById('page-title'));
+const settingsLink = /** @type {HTMLAnchorElement} */ (document.querySelector('.topbar-action'));
+/** Last non-settings screen, so the settings button can toggle back to it. */
+let lastHash = '#/';
 
 async function route() {
   let data;
@@ -44,12 +47,16 @@ async function route() {
   const [re, render, tab] = found;
   const match = /** @type {RegExpMatchArray} */ (hash.match(re));
 
-  document.querySelectorAll('.tabbar a').forEach((a) => {
+  document.querySelectorAll('.tabbar a, .topbar-action').forEach((a) => {
     const active = a.getAttribute('data-tab') === tab;
     a.classList.toggle('active', active);
     if (active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+
+  // The settings button toggles: on the settings screen it leads back to where you came from.
+  if (tab !== 'settings') lastHash = hash;
+  settingsLink.setAttribute('href', tab === 'settings' ? lastHash : '#/settings');
 
   const title = render(root, data, match);
   titleEl.textContent = title;

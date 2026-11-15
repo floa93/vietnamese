@@ -7,13 +7,12 @@ Live: https://floa93.github.io/vietnamese/
 ## Features
 
 - **Words**: a list of all words with search (accents optional, so `ca phe` finds `cà phê`), a topic filter, sorting (by topic, A–Z or newest added), a **new** badge for words added in the last 14 days, and a detail view.
-- **Train**: three modes, each for all topics or the ones you pick and for 10, 20 or all cards:
+- **Train**: two modes, each for all topics or the ones you pick and for 10, 20 or all cards:
   - *Flashcards* in either direction (EN → VI, VI → EN or mixed). Tap to reveal, then *I knew it* / *Again*, or swipe right / left. Cards you mark *Again* come back later in the same session.
-  - *Multiple choice*: 4 options, with wrong ones taken from the same topic where possible. You see right/wrong straight away (keys 1–4 work on desktop).
   - *Typing* (EN → VI): an exact answer is correct. If only the accents differ, it counts as "almost" and the letters with different marks are highlighted. Buttons help you type tones and letters without a Vietnamese keyboard: tap a tone button after typing a word and it puts the mark on the right vowel.
 - **Progress**: Leitner boxes 0–5. *I knew it* / a correct answer moves a word up one box, and *Again* / a wrong answer sends it back to box 0. A word in box *n* is due again after 0 / 1 / 3 / 7 / 14 / 30 days. Only the first rating of a word in each session counts.
 - **Home**: totals, learned words (box ≥ 1), words due today, a daily streak and progress per topic.
-- **Backup & settings** (⚙ in the top bar): export progress to a file, import it on another device, or reset everything after a confirmation.
+- **Backup & settings** (⚙ in the top bar; tap it again to go back): export progress to a file, import it on another device, or reset everything after a confirmation.
 - **Pronunciation**: 🔊 buttons read Vietnamese aloud with the device's built-in voice (`vi-VN`). They are hidden if the device has no Vietnamese voice.
 
 ## Project layout
