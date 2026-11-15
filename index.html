@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
+  <script>
+    // Apply the saved theme before the page paints (see js/theme.js).
+    try {
+      if (localStorage.getItem('vt.theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.querySelector('meta[name="theme-color"]').content = '#0c1616';
+      }
+    } catch (e) {}
+  </script>
   <meta name="description" content="English ⇄ Vietnamese (Northern / Hanoi) vocabulary trainer">
   <title>Vietnamese Trainer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -1,8 +1,9 @@
 // @ts-check
-// Backup (export / import) and reset of the learning progress.
+// Appearance, backup (export / import) and reset of the learning progress.
 import * as progress from '../progress.js';
 import { today, esc } from '../util.js';
 import { speak, voiceInfo } from '../speech.js';
+import { getTheme, setTheme } from '../theme.js';
 
 /** @param {HTMLElement} root @param {any} data */
 export function render(root, data) {
@@ -10,7 +11,16 @@ export function render(root, data) {
   const voice = document.documentElement.classList.contains('has-vi-voice');
   const info = voiceInfo();
 
+  const theme = getTheme();
   root.innerHTML = `
+    <section class="panel">
+      <h2 class="panel-title">Appearance</h2>
+      <div class="choices choices-2" role="radiogroup" aria-label="Theme">
+        <label class="choice"><input type="radio" name="theme" value="light"${theme === 'light' ? ' checked' : ''}><span>☀︎ Light</span></label>
+        <label class="choice"><input type="radio" name="theme" value="dark"${theme === 'dark' ? ' checked' : ''}><span>☾ Dark</span></label>
+      </div>
+    </section>
+
     <section class="panel">
       <h2 class="panel-title">Your progress</h2>
       <p class="muted">Progress is saved only in this browser on this device (${studied} of ${data.words.length} words studied).
@@ -52,6 +62,13 @@ export function render(root, data) {
       }
     </section>
   `;
+
+  root.querySelectorAll('input[name="theme"]').forEach((el) =>
+    el.addEventListener('change', (e) => {
+      const value = /** @type {HTMLInputElement} */ (e.target).value;
+      setTheme(value === 'dark' ? 'dark' : 'light');
+    }),
+  );
 
   const msg = /** @type {HTMLElement} */ (root.querySelector('#msg'));
   const say = (text, ok = true) => {

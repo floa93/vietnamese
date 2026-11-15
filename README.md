@@ -12,20 +12,21 @@ Live: https://floa93.github.io/vietnamese/
   - *Typing* (EN → VI): an exact answer is correct. If only the accents differ, it counts as "almost" and the letters with different marks are highlighted. Buttons help you type tones and letters without a Vietnamese keyboard: tap a tone button after typing a word and it puts the mark on the right vowel.
 - **Progress**: Leitner boxes 0–5. *I knew it* / a correct answer moves a word up one box, and *Again* / a wrong answer sends it back to box 0. A word in box *n* is due again after 0 / 1 / 3 / 7 / 14 / 30 days. Only the first rating of a word in each session counts.
 - **Home**: totals, learned words (box ≥ 1), words due today, a daily streak and progress per topic.
-- **Backup & settings** (⚙ in the top bar; tap it again to go back): export progress to a file, import it on another device, or reset everything after a confirmation.
+- **Backup & settings** (⚙ in the top bar; tap it again to go back): switch between a light (default) and dark theme, export progress to a file, import it on another device, or reset everything after a confirmation.
 - **Pronunciation**: 🔊 buttons read Vietnamese aloud with the device's built-in voice (`vi-VN`). They are hidden if the device has no Vietnamese voice.
 
 ## Project layout
 
 ```
 index.html               app shell (top bar, <main>, bottom navigation)
-css/style.css            all styles; always light (white) theme
+css/style.css            all styles; white light theme, dark theme via Settings
 js/app.js                hash router (#/, #/words, #/words/<id>, #/train, #/train/session, #/settings)
 js/data.js               loads data/words.json
 js/progress.js           Leitner boxes + streak in localStorage, export/import/reset
 js/util.js               diacritic folding, shuffle, dates
 js/vietnamese.js         typed-answer checking, tone placement for the helper keys
 js/speech.js             text-to-speech (Web Speech API)
+js/theme.js              light / dark theme switch
 js/views/*.js            one module per screen
 data/words.json          ALL vocabulary – the only file you edit to add words
 scripts/validate-data.mjs  data checks (run in CI)
